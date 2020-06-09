@@ -47,18 +47,17 @@ impl Acceptor{
 
     fn check_message(&mut self, message: Message) -> Message{
         match message {
-            Message::Prepare(i, s) => {
+            Message::Prepare(i, _) => {
                 if i > self.max_known_id {
                     self.max_known_id = i;
-                    self.status = Status::Proposed;
-                    // Reply Promise to the Proposer
+                    self.status = Status::Promised;
                     Message::Promise(i, self.id)
                 }
                 else{
                     Message::Fail(i, self.id)
                 }
             },
-            Message::Propose(i,v, s) => {
+            Message::Propose(i,v, _) => {
                 if self.max_known_id == i {
                     self.val = v;
                     self.status = Status::Accepted;
@@ -76,30 +75,31 @@ impl Acceptor{
 
     pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
         println!("Checking Buffer");
-        if buffer.contains_key(&self.id){
+        if buffer.contains_key(&self.id) && self.status != Status::Failed {
             let bucket = buffer.get_mut(&self.id).unwrap();
             while bucket.len() > 0 {
                 let message = self.check_message(bucket.pop().unwrap());
                 match message {
-                    Message::Promise(id, sid) => self.to_send.insert(id, message),
-                    Message::Fail(id, sid) => self.to_send.insert(id, message),
-                    Message::Accepted(id, val, sid) => self.to_send.insert(id, message),
+                    Message::Promise(id, _) => self.to_send.insert(id, message),
+                    Message::Fail(id, _) => self.to_send.insert(id, message),
+                    Message::Accepted(id, _, _) => self.to_send.insert(id, message),
                     _ => panic!("Wrong message created"),
                 };
             }
         }
-
     }
 
     pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
         println!("Sending to Buffer");
-        for (k,v) in self.to_send.drain(){
-            if buffer.contains_key(&k){
-                let bucket = buffer.get_mut(&k).unwrap();
-                bucket.push(v);
+        if self.status != Status::Failed {
+            for (k,v) in self.to_send.drain(){
+                // If the messaged is Accepted then broadcast it
+                if buffer.contains_key(&k){
+                    let bucket = buffer.get_mut(&k).unwrap();
+                    bucket.push(v);
+                }
             }
         }
-
     }
 }
 

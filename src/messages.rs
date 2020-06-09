@@ -1,8 +1,7 @@
 use std::fmt;
-use crate::acceptors::Acceptor;
-use crate::proposers::Proposer;
 
 #[derive(Debug)]
+#[derive(PartialEq, Eq)]
 pub enum Message{
     Prepare(u32,u32),
     Promise(u32,u32),
@@ -27,8 +26,11 @@ impl fmt::Display for Message{
 
 }
 
+#[derive(PartialEq, Eq)]
 pub enum Status{
     Active,
+    Prepared,
+    Promised,
     Proposed,
     Accepted,
     Failed
@@ -38,6 +40,8 @@ impl fmt::Display for Status{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match &self {
             Status::Active => "Active",
+            Status::Prepared => "Prepared",
+            Status::Promised => "Promised",
             Status::Proposed => "Proposed",
             Status::Accepted => "Accepted",
             Status::Failed => "Failed"

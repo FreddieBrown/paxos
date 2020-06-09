@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::env;
 
 fn main() {
+    // Command line arguments
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
     let f: u32 = *(&args[1].to_string().parse::<u32>().unwrap());
@@ -17,10 +18,12 @@ fn main() {
 
     println!("Num of Acceptors: {}, Num of Proposers: {}", accs, props);
 
+    // Setting up data structures to hold information
     let mut buffer: HashMap<u32, Vec<Message>> = HashMap::new();
     let mut acceptors: Vec<Acceptor> = Vec::new();
     let mut proposers: Vec<Proposer> = Vec::new();
 
+    // Instantiating the Acceptors
     for i in 0..accs {
         let mut acctr = Acceptor::default();
         acctr.set_id(i);
@@ -29,6 +32,7 @@ fn main() {
         buffer.insert(i, Vec::new());
     }
 
+    // Instantiating the Proposers
     for j in accs..accs+props {
         let mut ppr = Proposer::default();
         ppr.set_id(j);
@@ -37,4 +41,8 @@ fn main() {
         proposers.push(ppr);
         buffer.insert(j, Vec::new());
     }
+
+    // Start main loop
+
+    // End program
 }
