@@ -20,15 +20,15 @@ impl fmt::Display for Status{
     }
 }
 
-pub struct Acceptor{
+pub struct Acceptor<'a>{
     max_known_id: u32,
     id: u32,
     val: u32,
     status: Status,
-    messages: Vec<Message>,
+    messages: Vec<Message<'a>>,
 }
 
-impl Acceptor{
+impl<'a> Acceptor<'a>{
 
     pub fn max_known_id(&self) -> u32{
         self.max_known_id
@@ -62,7 +62,7 @@ impl Acceptor{
         self.status = status;
     }
 
-    pub fn publish_message(&mut self, message: Message) {
+    pub fn publish_message(&mut self, message: Message<'a>) {
         self.messages.push(message);
     }
 
@@ -76,7 +76,7 @@ impl Acceptor{
             println!("{}", msg);
             
             match msg {
-                Message::Prepare(i) => {
+                Message::Prepare(i,p) => {
                     if i > self.max_known_id {
                         self.max_known_id = i;
                         self.status = Status::Proposed;
@@ -84,7 +84,7 @@ impl Acceptor{
                     }
                     // else reply Fail
                 },
-                Message::Propose(i,v) => {
+                Message::Propose(i,v,p) => {
                     if self.max_known_id == i {
                         self.val = v;
                         self.status = Status::Accepted;
@@ -99,8 +99,8 @@ impl Acceptor{
     }
 }
 
-impl Default for Acceptor{
-    fn default() -> Acceptor{
+impl<'a> Default for Acceptor<'a>{
+    fn default() -> Acceptor<'a>{
         Acceptor{
             max_known_id: 0,
             id: 0,
@@ -111,7 +111,7 @@ impl Default for Acceptor{
     }
 }
 
-impl fmt::Display for Acceptor{
+impl<'a> fmt::Display for Acceptor<'a>{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Acceptor => max_known_id: {}, id: {}, val: {}, status: {}", self.max_known_id, self.id, self.val, self.status)
     }
