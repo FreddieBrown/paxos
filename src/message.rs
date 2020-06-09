@@ -3,10 +3,10 @@ use crate::acceptors::Acceptor;
 use crate::proposers::Proposer;
 pub enum Message<'a>{
     Prepare(u32,&'a mut Proposer),
-    Promise(u32,&'a mut Acceptor<'a>),
+    Promise(u32,&'a mut Acceptor),
     Propose(u32,u32,&'a mut Proposer),
-    Accepted(u32,u32, &'a mut Acceptor<'a>),
-    Fail(u32, &'a mut Acceptor<'a>)
+    Accepted(u32,u32, &'a mut Acceptor),
+    Fail(u32, &'a mut Acceptor)
 }
 
 impl<'a> fmt::Display for Message<'a>{

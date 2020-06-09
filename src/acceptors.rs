@@ -20,15 +20,14 @@ impl fmt::Display for Status{
     }
 }
 
-pub struct Acceptor<'a>{
+pub struct Acceptor{
     max_known_id: u32,
     id: u32,
     val: u32,
     status: Status,
-    messages: Vec<Message<'a>>,
 }
 
-impl<'a> Acceptor<'a>{
+impl Acceptor{
 
     pub fn max_known_id(&self) -> u32{
         self.max_known_id
@@ -62,53 +61,42 @@ impl<'a> Acceptor<'a>{
         self.status = status;
     }
 
-    pub fn publish_message(&mut self, message: Message<'a>) {
-        self.messages.push(message);
-    }
-
-    pub fn check_messages(&mut self) {
-        println!("Checking messages to see what data we have");
-        while self.messages.len() > 0 {
-            let msg = self.messages.pop().unwrap();
-            println!("{}", msg);
-            
-            match msg {
-                Message::Prepare(i,p) => {
-                    if i > self.max_known_id {
-                        self.max_known_id = i;
-                        self.status = Status::Proposed;
-                        // Reply Promise to the Proposer
-                    }
-                    // else reply Fail
-                },
-                Message::Propose(i,v,p) => {
-                    if self.max_known_id == i {
-                        self.val = v;
-                        self.status = Status::Accepted;
-                        // Reply Accepted to the proposer
-                        // Broadcast Accpeted to all
-                    }
-                    // Else reply Fail
-                },
-                _ => ()
-            }
+    pub fn publish_message<'b>(&mut self, message: Message<'b>) {
+        match message {
+            Message::Prepare(i,p) => {
+                if i > self.max_known_id {
+                    self.max_known_id = i;
+                    self.status = Status::Proposed;
+                    // Reply Promise to the Proposer
+                }
+                // else reply Fail
+            },
+            Message::Propose(i,v,p) => {
+                if self.max_known_id == i {
+                    self.val = v;
+                    self.status = Status::Accepted;
+                    // Reply Accepted to the proposer
+                    // Broadcast Accpeted to all
+                }
+                // Else reply Fail
+            },
+            _ => ()
         }
     }
 }
 
-impl<'a> Default for Acceptor<'a>{
-    fn default() -> Acceptor<'a>{
+impl Default for Acceptor{
+    fn default() -> Acceptor{
         Acceptor{
             max_known_id: 0,
             id: 0,
             val: 0,
             status: Status::Active,
-            messages: vec![]
         }
     }
 }
 
-impl<'a> fmt::Display for Acceptor<'a>{
+impl fmt::Display for Acceptor{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Acceptor => max_known_id: {}, id: {}, val: {}, status: {}", self.max_known_id, self.id, self.val, self.status)
     }
