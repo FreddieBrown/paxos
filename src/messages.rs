@@ -22,3 +22,22 @@ impl fmt::Display for Message{
     }
 
 }
+
+pub enum Status{
+    Active,
+    Proposed,
+    Accepted,
+    Failed
+}
+
+impl fmt::Display for Status{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match &self {
+            Status::Active => "Active",
+            Status::Proposed => "Proposed",
+            Status::Accepted => "Accepted",
+            Status::Failed => "Failed"
+        };
+        write!(f, "{}", printable)
+    }
+}

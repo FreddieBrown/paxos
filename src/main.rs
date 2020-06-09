@@ -1,8 +1,8 @@
-mod message;
-pub use crate::message::Message;
+mod messages;
+pub use crate::messages::Message;
+pub use crate::messages::Status;
 mod acceptors;
 pub use crate::acceptors::Acceptor;
-pub use crate::acceptors::Status;
 mod proposers;
 pub use crate::proposers::Proposer;
 use std::collections::HashMap;
@@ -24,6 +24,7 @@ fn main() {
     for i in 0..accs {
         let mut acctr = Acceptor::default();
         acctr.set_id(i);
+        println!("Acceptor: {}", acctr);
         acceptors.push(acctr);
         buffer.insert(i, Vec::new());
     }
@@ -31,15 +32,9 @@ fn main() {
     for j in accs..accs+props {
         let mut ppr = Proposer::default();
         ppr.set_id(j);
+        ppr.set_num_acceptors(accs);
+        println!("Proposer: {}", ppr);
         proposers.push(ppr);
         buffer.insert(j, Vec::new());
     }
-    // let mut acceptor = Acceptor::default();
-    // acceptor.set_max_known_id(10);
-    // let mut proposer = Proposer::default();
-    // proposer.set_id(10);
-    // acceptor.publish_message(Message::Prepare(32));
-    // acceptor.publish_message(Message::Propose(32, 10));
-    // println!("{}", acceptor);
-    // println!("{}", proposer);
 }

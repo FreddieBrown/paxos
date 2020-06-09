@@ -1,25 +1,7 @@
 use std::fmt;
-use crate::message::Message;
+use crate::messages::Message;
+use crate::messages::Status;
 use std::collections::HashMap;
-
-pub enum Status{
-    Active,
-    Proposed,
-    Accepted,
-    Failed
-}
-
-impl fmt::Display for Status{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match &self {
-            Status::Active => "Active",
-            Status::Proposed => "Proposed",
-            Status::Accepted => "Accepted",
-            Status::Failed => "Failed"
-        };
-        write!(f, "{}", printable)
-    }
-}
 
 pub struct Acceptor{
     max_known_id: u32,
@@ -64,11 +46,7 @@ impl Acceptor{
 
     pub fn check_messages(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
         if buffer.contains_key(&self.id){
-            let bucket = match buffer.get_mut(&self.id) {
-                Some(t) => t,
-                None => panic!("Not bucket to get")
-            };
-            
+            let bucket = buffer.get_mut(&self.id).unwrap();
             while bucket.len() > 0 {
                 let message = bucket.pop().unwrap();
                 match message {
