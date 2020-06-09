@@ -1,4 +1,5 @@
 use std::fmt;
+use crate::message::Message;
 
 pub enum Status{
     Active,
@@ -24,6 +25,7 @@ pub struct Acceptor{
     id: u32,
     val: u32,
     status: Status,
+    messages: Vec<Message>,
 }
 
 impl Acceptor{
@@ -59,6 +61,42 @@ impl Acceptor{
     pub fn set_status(&mut self, status: Status){
         self.status = status;
     }
+
+    pub fn publish_message(&mut self, message: Message) {
+        self.messages.push(message);
+    }
+
+    pub fn check_messages(&mut self) {
+        println!("Checking messages to see what data we have");
+        while self.messages.len() > 0 {
+            let msg = match self.messages.pop(){
+                Some(t) => t,
+                None => panic!("Vector Empty!")
+            };
+            println!("{}", msg);
+            
+            match msg {
+                Message::Prepare(i) => {
+                    if i > self.max_known_id {
+                        self.max_known_id = i;
+                        self.status = Status::Proposed;
+                        // Reply Promise to the Proposer
+                    }
+                    // else reply Fail
+                },
+                Message::Propose(i,v) => {
+                    if self.max_known_id == i {
+                        self.val = v;
+                        self.status = Status::Accepted;
+                        // Reply Accepted to the proposer
+                        // Broadcast Accpeted to all
+                    }
+                    // Else reply Fail
+                },
+                _ => ()
+            }
+        }
+    }
 }
 
 impl Default for Acceptor{
@@ -68,6 +106,7 @@ impl Default for Acceptor{
             id: 0,
             val: 0,
             status: Status::Active,
+            messages: vec![]
         }
     }
 }

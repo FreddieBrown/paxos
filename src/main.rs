@@ -7,13 +7,16 @@ mod proposers;
 pub use crate::proposers::Proposer;
 
 fn main() {
-
-    let val = Message::Propose(32,5);
+    let val = Message::Prepare(32);
+    let val1 = Message::Propose(32, 10);
     let mut acceptor = Acceptor::default();
     acceptor.set_max_known_id(10);
     let mut proposer = Proposer::default();
     proposer.set_id(10);
-    println!("{}", val);
+    acceptor.publish_message(val);
+    acceptor.check_messages();
+    acceptor.publish_message(val1);
+    acceptor.check_messages();
     println!("{}", acceptor);
     println!("{}", proposer);
 }

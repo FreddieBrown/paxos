@@ -1,4 +1,6 @@
 use std::fmt;
+use crate::message::Message;
+use crate::acceptors::Acceptor;
 
 pub struct Proposer{
     id: u32,
@@ -31,6 +33,22 @@ impl Proposer{
 
     pub fn set_val(&mut self, val: u32){
         self.val = val;
+    }
+
+    pub fn phase_one(&mut self, list: &mut [Acceptor]){
+        println!("Phase 1");
+        for acc in list {
+            println!("{}",acc);
+        }
+
+    }
+
+    pub fn phase_two(&mut self, list: &mut [Acceptor]){
+        println!("Phase 2");
+        for acc in list {
+            println!("{}",acc);
+        }
+
     }
 }
 
