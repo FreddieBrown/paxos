@@ -43,6 +43,26 @@ fn main() {
     }
 
     // Start main loop
+    let mut loop_cond = false;
+    loop {
+        // Add in section about client selecting a value for a proposer
+        // Add in section about making nodes fail
 
+        for acc in acceptors.iter_mut(){
+            acc.check_buffer(&mut buffer);
+            acc.send_buffer(&mut buffer);
+        }
+
+        for prop in proposers.iter_mut(){
+            prop.run(&acceptors, &mut buffer);
+            if prop.status() == &Status::Accepted{
+                loop_cond = true;
+            }
+        }
+        if loop_cond {
+            break;
+        }
+    }
+    println!("Ending Program");
     // End program
 }
