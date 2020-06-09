@@ -69,10 +69,7 @@ impl<'a> Acceptor<'a>{
     pub fn check_messages(&mut self) {
         println!("Checking messages to see what data we have");
         while self.messages.len() > 0 {
-            let msg = match self.messages.pop(){
-                Some(t) => t,
-                None => panic!("Vector Empty!")
-            };
+            let msg = self.messages.pop().unwrap();
             println!("{}", msg);
             
             match msg {
