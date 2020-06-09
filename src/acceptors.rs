@@ -61,8 +61,6 @@ impl Acceptor{
                 if self.max_known_id == i {
                     self.val = v;
                     self.status = Status::Accepted;
-                    // Reply Accepted to the proposer
-                    // Broadcast Accepted to all
                     Message::Accepted(i, v, self.id)
                 }
                 else{
@@ -93,7 +91,6 @@ impl Acceptor{
         println!("Sending to Buffer");
         if self.status != Status::Failed {
             for (k,v) in self.to_send.drain(){
-                // If the messaged is Accepted then broadcast it
                 if buffer.contains_key(&k){
                     let bucket = buffer.get_mut(&k).unwrap();
                     bucket.push(v);

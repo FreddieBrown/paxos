@@ -13,6 +13,7 @@ pub struct Proposer{
     promised: HashSet<u32>,
     accepted: HashSet<u32>,
     status: Status,
+    prom_state: bool
 
 }
 
@@ -51,9 +52,7 @@ impl Proposer{
     }
 
     pub fn run(&mut self, list: &Vec<Acceptor>, buffer: &mut HashMap<u32, Vec<Message>>){
-        // Check status of proposer
         if self.status == Status::Active && self.val > 0{
-            // If status is Active and value > 0 is set, send propose messages out
             for acc in list.iter(){
                 if acc.status() != &Status::Promised 
                 && acc.status() != &Status::Accepted 
@@ -63,21 +62,44 @@ impl Proposer{
             }
         }
         else {
-            // Otherwise, deal with messages in the message queue and perform actions based on them 
             self.check_buffer(buffer);
         }
         self.send_buffer(buffer);
-            
     }
 
     pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
         println!("Checking Buffer");
         if buffer.contains_key(&self.id) && self.status != Status::Failed {
+            let acc_size: usize = ((self.num_acceptors/2)+1) as usize;
             let bucket = buffer.get_mut(&self.id).unwrap();
             while bucket.len() > 0 {
-                let message_tup = bucket.pop().unwrap();
-                // Analyse the received message
-                // Reply with a message to acceptors is needed
+                let message = bucket.pop().unwrap();
+                match message {
+                    Message::Promise(id,sid) => {
+                        self.promised.insert(sid);
+                        if self.prom_state {
+                            self.to_send.insert(sid,Message::Propose(id, self.val, id));
+                        }
+                        else if self.promised.len() > acc_size {
+                            self.status = Status::Promised;
+                            self.prom_state = true;
+                            for aid in self.promised.iter(){
+                                self.to_send.insert(*aid,Message::Propose(id, self.val, id));
+                            }
+                        }
+                        
+                    },
+                    Message::Accepted(_,_,sid) => {
+                        self.accepted.insert(sid);
+                        if self.accepted.len() > acc_size {
+                            self.status = Status::Accepted;
+                        }   
+                    },
+                    Message::Fail(_,_) => {
+                        self.status = Status::Failed;
+                    },
+                    _ => ()
+                };
             }
         }
     }
@@ -86,7 +108,7 @@ impl Proposer{
         println!("Sending to Buffer");
         if self.status != Status::Failed {
             for (k,v) in self.to_send.drain(){
-                // If the messaged is Accepted by over half acceptors then declare accepted value
+                // TODO: If the messaged is Accepted by over half acceptors then declare accepted value
                 if buffer.contains_key(&k){
                     let bucket = buffer.get_mut(&k).unwrap();
                     bucket.push(v);
@@ -105,7 +127,8 @@ impl Default for Proposer{
             to_send: HashMap::new(),
             promised: HashSet::new(),
             accepted: HashSet::new(),
-            status: Status::Active
+            status: Status::Active,
+            prom_state: false
         }
     }
 }
