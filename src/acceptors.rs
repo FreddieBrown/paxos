@@ -1,5 +1,6 @@
 use std::fmt;
 use crate::message::Message;
+use std::collections::HashMap;
 
 pub enum Status{
     Active,
@@ -61,26 +62,36 @@ impl Acceptor{
         self.status = status;
     }
 
-    pub fn publish_message<'b>(&mut self, message: Message<'b>) {
-        match message {
-            Message::Prepare(i,p) => {
-                if i > self.max_known_id {
-                    self.max_known_id = i;
-                    self.status = Status::Proposed;
-                    // Reply Promise to the Proposer
-                }
-                // else reply Fail
-            },
-            Message::Propose(i,v,p) => {
-                if self.max_known_id == i {
-                    self.val = v;
-                    self.status = Status::Accepted;
-                    // Reply Accepted to the proposer
-                    // Broadcast Accpeted to all
-                }
-                // Else reply Fail
-            },
-            _ => ()
+    pub fn check_messages(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
+        if buffer.contains_key(&self.id){
+            let bucket = match buffer.get_mut(&self.id) {
+                Some(t) => t,
+                None => panic!("Not bucket to get")
+            };
+            
+            while bucket.len() > 0 {
+                let message = bucket.pop().unwrap();
+                match message {
+                    Message::Prepare(i, s) => {
+                        if i > self.max_known_id {
+                            self.max_known_id = i;
+                            self.status = Status::Proposed;
+                            // Reply Promise to the Proposer
+                        }
+                        // else reply Fail
+                    },
+                    Message::Propose(i,v, s) => {
+                        if self.max_known_id == i {
+                            self.val = v;
+                            self.status = Status::Accepted;
+                            // Reply Accepted to the proposer
+                            // Broadcast Accpeted to all
+                        }
+                        // Else reply Fail
+                    },
+                    _ => ()
+                }  
+            }
         }
     }
 }

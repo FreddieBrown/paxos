@@ -1,22 +1,22 @@
 use std::fmt;
 use crate::acceptors::Acceptor;
 use crate::proposers::Proposer;
-pub enum Message<'a>{
-    Prepare(u32,&'a mut Proposer),
-    Promise(u32,&'a mut Acceptor),
-    Propose(u32,u32,&'a mut Proposer),
-    Accepted(u32,u32, &'a mut Acceptor),
-    Fail(u32, &'a mut Acceptor)
+pub enum Message{
+    Prepare(u32,u32),
+    Promise(u32,u32),
+    Propose(u32,u32,u32),
+    Accepted(u32,u32,u32),
+    Fail(u32,u32)
 }
 
-impl<'a> fmt::Display for Message<'a>{
+impl fmt::Display for Message{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let print = match &self{
-            Message::Prepare(id, prop) => format!("Prepare => ID: {}, Sender ID: {}", &id, prop.id()),
-            Message::Promise(id, acc) => format!("Promise => ID: {}, Sender ID: {}", &id, acc.id()),
-            Message::Fail(id, acc) => format!("Fail => ID: {}, Sender ID: {}", &id, acc.id()),
-            Message::Propose(id, val, prop) => format!("Propose => ID: {}, Val: {}, Sender ID: {}", &id, &val, prop.id()),
-            Message::Accepted(id, val, acc) => format!("Accepted => ID: {}, Val: {}, Sender ID: {}", &id, &val, acc.id()),
+            Message::Prepare(id, sid) => format!("Prepare => ID: {}, Sender ID: {}", &id, &sid),
+            Message::Promise(id, sid) => format!("Promise => ID: {}, Sender ID: {}", &id, &sid),
+            Message::Fail(id, sid) => format!("Fail => ID: {}, Sender ID: {}", &id, &sid),
+            Message::Propose(id, val, sid) => format!("Propose => ID: {}, Val: {}, Sender ID: {}", &id, &val, &sid),
+            Message::Accepted(id, val, sid) => format!("Accepted => ID: {}, Val: {}, Sender ID: {}", &id, &val, &sid),
         };
         write!(f, "{}", print)
     }
