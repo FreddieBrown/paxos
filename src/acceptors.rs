@@ -8,6 +8,7 @@ pub struct Acceptor{
     id: u32,
     val: u32,
     status: Status,
+    to_send: HashMap<u32, Message>
 }
 
 impl Acceptor{
@@ -44,33 +45,61 @@ impl Acceptor{
         self.status = status;
     }
 
-    pub fn check_messages(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
+    fn check_message(&mut self, message: Message) -> Message{
+        match message {
+            Message::Prepare(i, s) => {
+                if i > self.max_known_id {
+                    self.max_known_id = i;
+                    self.status = Status::Proposed;
+                    // Reply Promise to the Proposer
+                    Message::Promise(i, self.id)
+                }
+                else{
+                    Message::Fail(i, self.id)
+                }
+            },
+            Message::Propose(i,v, s) => {
+                if self.max_known_id == i {
+                    self.val = v;
+                    self.status = Status::Accepted;
+                    // Reply Accepted to the proposer
+                    // Broadcast Accepted to all
+                    Message::Accepted(i, v, self.id)
+                }
+                else{
+                    Message::Fail(i, self.id)
+                }
+            },
+            _ => Message::Error
+        }
+    }
+
+    pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
+        println!("Checking Buffer");
         if buffer.contains_key(&self.id){
             let bucket = buffer.get_mut(&self.id).unwrap();
             while bucket.len() > 0 {
-                let message = bucket.pop().unwrap();
+                let message = self.check_message(bucket.pop().unwrap());
                 match message {
-                    Message::Prepare(i, s) => {
-                        if i > self.max_known_id {
-                            self.max_known_id = i;
-                            self.status = Status::Proposed;
-                            // Reply Promise to the Proposer
-                        }
-                        // else reply Fail
-                    },
-                    Message::Propose(i,v, s) => {
-                        if self.max_known_id == i {
-                            self.val = v;
-                            self.status = Status::Accepted;
-                            // Reply Accepted to the proposer
-                            // Broadcast Accpeted to all
-                        }
-                        // Else reply Fail
-                    },
-                    _ => ()
-                }  
+                    Message::Promise(id, sid) => self.to_send.insert(id, message),
+                    Message::Fail(id, sid) => self.to_send.insert(id, message),
+                    Message::Accepted(id, val, sid) => self.to_send.insert(id, message),
+                    _ => panic!("Wrong message created"),
+                };
             }
         }
+
+    }
+
+    pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
+        println!("Sending to Buffer");
+        for (k,v) in self.to_send.drain(){
+            if buffer.contains_key(&k){
+                let bucket = buffer.get_mut(&k).unwrap();
+                bucket.push(v);
+            }
+        }
+
     }
 }
 
@@ -81,6 +110,7 @@ impl Default for Acceptor{
             id: 0,
             val: 0,
             status: Status::Active,
+            to_send: HashMap::new(),
         }
     }
 }

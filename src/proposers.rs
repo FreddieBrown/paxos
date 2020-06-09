@@ -2,6 +2,7 @@ use std::fmt;
 use crate::messages::Message;
 use crate::messages::Status;
 use crate::acceptors::Acceptor;
+use std::collections::HashMap;
 
 pub struct Proposer{
     id: u32,
@@ -49,6 +50,13 @@ impl Proposer{
         // Check status of proposer
             // If status is Active and value > 0 is set, send propose messages out
             // Otherwise, deal with messages in the message queue and perform actions based on them 
+    }
+
+    pub fn send_to_acceptor(&self, buffer: &mut HashMap<u32, Vec<Message>>, message: Message, aid: u32){
+        if buffer.contains_key(&aid){
+            let bucket = buffer.get_mut(&aid).unwrap();
+            bucket.push(message);
+        }
     }
 }
 

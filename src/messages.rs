@@ -1,12 +1,15 @@
 use std::fmt;
 use crate::acceptors::Acceptor;
 use crate::proposers::Proposer;
+
+#[derive(Debug)]
 pub enum Message{
     Prepare(u32,u32),
     Promise(u32,u32),
     Propose(u32,u32,u32),
     Accepted(u32,u32,u32),
-    Fail(u32,u32)
+    Fail(u32,u32),
+    Error
 }
 
 impl fmt::Display for Message{
@@ -17,6 +20,7 @@ impl fmt::Display for Message{
             Message::Fail(id, sid) => format!("Fail => ID: {}, Sender ID: {}", &id, &sid),
             Message::Propose(id, val, sid) => format!("Propose => ID: {}, Val: {}, Sender ID: {}", &id, &val, &sid),
             Message::Accepted(id, val, sid) => format!("Accepted => ID: {}, Val: {}, Sender ID: {}", &id, &val, &sid),
+            Message::Error => format!("Error")
         };
         write!(f, "{}", print)
     }
