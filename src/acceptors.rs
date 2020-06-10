@@ -1,29 +1,14 @@
 use std::fmt;
-
-pub enum Status{
-    Active,
-    Proposed,
-    Accepted,
-    Failed
-}
-
-impl fmt::Display for Status{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match &self {
-            Status::Active => "Active",
-            Status::Proposed => "Proposed",
-            Status::Accepted => "Accepted",
-            Status::Failed => "Failed"
-        };
-        write!(f, "{}", printable)
-    }
-}
+use crate::messages::Message;
+use crate::messages::Status;
+use std::collections::HashMap;
 
 pub struct Acceptor{
     max_known_id: u32,
     id: u32,
     val: u32,
-    status: Status,
+    pub status: Status,
+    to_send: HashMap<u32, Message>
 }
 
 impl Acceptor{
@@ -38,10 +23,6 @@ impl Acceptor{
 
     pub fn val(&self) -> u32{
         self.val
-    }
-
-    pub fn status(&self) -> &Status{
-        &self.status
     }
 
     pub fn set_max_known_id(&mut self, id: u32){
@@ -59,6 +40,59 @@ impl Acceptor{
     pub fn set_status(&mut self, status: Status){
         self.status = status;
     }
+
+    fn check_message(&mut self, message: Message) -> Message{
+        match message {
+            Message::Prepare(i, _) => {
+                if i > self.max_known_id {
+                    self.max_known_id = i;
+                    self.status = Status::Promised;
+                    Message::Promise(i, self.id)
+                }
+                else{
+                    Message::Fail(i, self.id)
+                }
+            },
+            Message::Propose(i,v, _) => {
+                if self.max_known_id == i {
+                    self.val = v;
+                    self.status = Status::Accepted;
+                    Message::Accepted(i, v, self.id)
+                }
+                else{
+                    Message::Fail(i, self.id)
+                }
+            },
+            _ => Message::Error
+        }
+    }
+
+    pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
+        if buffer.contains_key(&self.id) && self.status != Status::Failed {
+            let bucket = buffer.get_mut(&self.id).unwrap();
+            while bucket.len() > 0 {
+                let message = self.check_message(bucket.pop().unwrap());
+                match message {
+                    Message::Promise(id, _) => self.to_send.insert(id, message),
+                    Message::Fail(id, _) => self.to_send.insert(id, message),
+                    Message::Accepted(id, _, _) => self.to_send.insert(id, message),
+                    _ => panic!("Wrong message created"),
+                };
+            }
+        }
+    }
+
+    pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
+        if self.status != Status::Failed {
+            for (k,v) in self.to_send.drain(){
+                if buffer.contains_key(&k){
+                    println!("Sending ({}) to Prop {} from Acc {}", &v, &k, &self.id);
+                    let bucket = buffer.get_mut(&k).unwrap();
+                    bucket.push(v);
+                }
+            }
+        }
+    }
 }
 
 impl Default for Acceptor{
@@ -68,6 +102,7 @@ impl Default for Acceptor{
             id: 0,
             val: 0,
             status: Status::Active,
+            to_send: HashMap::new(),
         }
     }
 }
