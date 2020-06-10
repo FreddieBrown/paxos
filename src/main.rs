@@ -20,7 +20,7 @@ fn main() {
     let mut declared_val = 0;
     let mut rng = rand::thread_rng();
     let threshold: u32 = (100.0*prob) as u32;
-
+    let fail_val = rng.gen_range(1, 101);
     println!("Num of Acceptors: {}, Num of Proposers: {}", accs, props);
 
     // Setting up data structures to hold information
@@ -52,17 +52,27 @@ fn main() {
         // Add in section about client selecting a value for a proposer
         let number = rng.gen_range(1, 101);
         let id = rng.gen_range(accs, accs+props);
+        let fail_id = rng.gen_range(0, accs+props);
         // Add in section about making nodes fail
 
         for acc in acceptors.iter_mut(){
-            println!("Acceptors");
+            println!("Acceptor {}", acc.id());
+            if number == fail_val && fail_id == acc.id(){
+                acc.set_status(Status::Failed);
+                println!("Acceptor {} has failed", acc.id());
+            }
             acc.check_buffer(&mut buffer);
             acc.send_buffer(&mut buffer);
         }
 
         for prop in proposers.iter_mut(){
-            println!("Proposer {}", &prop.id());
-            if number <= threshold && prop.id() == id{
+            println!("Proposer {}", prop.id());
+            if number == fail_val && fail_id == prop.id(){
+                prop.set_status(Status::Failed);
+                println!("Proposer {} has failed", prop.id());
+            }
+            
+            if prop.status != Status::Failed && number <= threshold && prop.id() == id{
                 prop.set_val(number);
             }
             prop.run(&acceptors, &mut buffer);
