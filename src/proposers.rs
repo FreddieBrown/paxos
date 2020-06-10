@@ -54,7 +54,11 @@ impl Proposer{
                     Status::Active => {
                         self.status = Status::Prepared;
                         self.to_send.insert(acc.id(), Message::Prepare(self.id, self.id));
-                    }
+                    },
+                    Status::Promised => {
+                        self.status = Status::Prepared;
+                        self.to_send.insert(acc.id(), Message::Prepare(self.id, self.id));
+                    },
                     _ => println!("{}", &acc)
                 };
             }

@@ -6,21 +6,65 @@ pub use crate::acceptors::Acceptor;
 mod proposers;
 pub use crate::proposers::Proposer;
 use std::collections::HashMap;
-use std::env;
 use rand::Rng;
+use clap::{Arg, App};
 
 fn main() {
     // Command line arguments
-    let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
-    let f: u32 = *(&args[1].to_string().parse::<u32>().unwrap());
-    let prob: f32 = *(&args[2].to_string().parse::<f32>().unwrap());
+    // let args: Vec<String> = env::args().collect();
+    // println!("{:?}", args);
+    // let f: u32 = *(&args[1].to_string().parse::<u32>().unwrap());
+    // let prob: f32 = *(&args[2].to_string().parse::<f32>().unwrap());
+
+    let matches = App::new("Synchronous PAXOS")
+        .version("0.0.1")
+        .author("Freddie Brown")
+        .about("Synchronous PAXOS for deciding a value")
+        .arg(Arg::with_name("ftolerance")
+                .short("f")
+                .long("ftolerance")
+                .takes_value(true)
+                .help("Number of nodes that can fail"))
+        .arg(Arg::with_name("probability")
+                .short("p")
+                .long("probability")
+                .takes_value(true)
+                .help("Probability with which a random value is sent to proposer"))
+        .arg(Arg::with_name("range")
+                .short("r")
+                .long("range")
+                .takes_value(true)
+                .help("Range of value to use"))
+        .get_matches();
+
+    let f: u32 = match matches.value_of("ftolerance"){
+        Some(v) => match v.parse::<u32>(){
+            Ok(t) => t,
+            Err(_) => 2
+        },
+        None => 2
+    };
+    let prob: f32 = match matches.value_of("probability"){
+        Some(v) => match v.parse::<f32>(){
+            Ok(t) => t,
+            Err(_) => 0.2
+        },
+        None => 0.2
+    };
+    let range: u32 = match matches.value_of("range"){
+        Some(v) => match v.parse::<u32>(){
+            Ok(t) => t,
+            Err(_) => 100
+        },
+        None => 100
+    };
+
     let accs:u32 = (3*f)+1;
     let props:u32 = (3*f)+1;
     let mut declared_val = 0;
     let mut rng = rand::thread_rng();
-    let threshold: u32 = (100.0*prob) as u32;
-    let fail_val = rng.gen_range(1, 101);
+    let threshold: u32 = ((range as f32)*prob) as u32;
+    let fail_val = rng.gen_range(1, range+1);
     println!("Num of Acceptors: {}, Num of Proposers: {}", accs, props);
 
     // Setting up data structures to hold information
@@ -50,7 +94,7 @@ fn main() {
     // Start main loop
     loop {
         // Add in section about client selecting a value for a proposer
-        let number = rng.gen_range(1, 101);
+        let number = rng.gen_range(1, range+1);
         let id = rng.gen_range(accs, accs+props);
         let fail_id = rng.gen_range(0, accs+props);
         // Add in section about making nodes fail
