@@ -12,7 +12,7 @@ pub struct Proposer{
     to_send: HashMap<u32, Message>,
     promised: HashSet<u32>,
     accepted: HashSet<u32>,
-    status: Status,
+    pub status: Status,
     prom_state: bool
 
 }
@@ -29,10 +29,6 @@ impl Proposer{
 
     pub fn val(&self) -> u32{
         self.val
-    }
-
-    pub fn status(&self) -> &Status{
-        &self.status
     }
 
     pub fn set_num_acceptors(&mut self, num: u32){
@@ -54,11 +50,13 @@ impl Proposer{
     pub fn run(&mut self, list: &Vec<Acceptor>, buffer: &mut HashMap<u32, Vec<Message>>){
         if self.status == Status::Active && self.val > 0{
             for acc in list.iter(){
-                if acc.status() != &Status::Promised 
-                && acc.status() != &Status::Accepted 
-                && acc.status() != &Status::Failed {
-                    self.to_send.insert(acc.id(), Message::Prepare(self.id, self.id));
-                }
+                match acc.status {
+                    Status::Active => {
+                        self.status = Status::Prepared;
+                        self.to_send.insert(acc.id(), Message::Prepare(self.id, self.id));
+                    }
+                    _ => println!("{}", &acc)
+                };
             }
         }
         else {
@@ -68,7 +66,6 @@ impl Proposer{
     }
 
     pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
-        println!("Checking Buffer");
         if buffer.contains_key(&self.id) && self.status != Status::Failed {
             let acc_size: usize = ((self.num_acceptors/2)+1) as usize;
             let bucket = buffer.get_mut(&self.id).unwrap();
@@ -105,11 +102,11 @@ impl Proposer{
     }
 
     pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
-        println!("Sending to Buffer");
         if self.status != Status::Failed {
             for (k,v) in self.to_send.drain(){
                 // TODO: If the messaged is Accepted by over half acceptors then declare accepted value
                 if buffer.contains_key(&k){
+                    println!("Sending ({}) to Acc {} from Prop {}", &v, &k, &self.id);
                     let bucket = buffer.get_mut(&k).unwrap();
                     bucket.push(v);
                 }

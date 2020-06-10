@@ -7,7 +7,7 @@ pub struct Acceptor{
     max_known_id: u32,
     id: u32,
     val: u32,
-    status: Status,
+    pub status: Status,
     to_send: HashMap<u32, Message>
 }
 
@@ -23,10 +23,6 @@ impl Acceptor{
 
     pub fn val(&self) -> u32{
         self.val
-    }
-
-    pub fn status(&self) -> &Status{
-        &self.status
     }
 
     pub fn set_max_known_id(&mut self, id: u32){
@@ -72,7 +68,6 @@ impl Acceptor{
     }
 
     pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
-        println!("Checking Buffer");
         if buffer.contains_key(&self.id) && self.status != Status::Failed {
             let bucket = buffer.get_mut(&self.id).unwrap();
             while bucket.len() > 0 {
@@ -88,10 +83,10 @@ impl Acceptor{
     }
 
     pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
-        println!("Sending to Buffer");
         if self.status != Status::Failed {
             for (k,v) in self.to_send.drain(){
                 if buffer.contains_key(&k){
+                    println!("Sending ({}) to Prop {} from Acc {}", &v, &k, &self.id);
                     let bucket = buffer.get_mut(&k).unwrap();
                     bucket.push(v);
                 }
