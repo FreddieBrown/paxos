@@ -7,6 +7,7 @@ pub struct Acceptor{
     max_known_id: u32,
     id: u32,
     val: u32,
+    accepted_id: u32,
     pub status: Status,
     to_send: HashMap<u32, Message>
 }
@@ -98,19 +99,25 @@ impl Acceptor{
     fn check_message(&mut self, message: Message) -> Message{
         match message {
             Message::Prepare(i, _) => {
-                if i > self.max_known_id {
-                    self.max_known_id = i;
-                    self.status = Status::Promised;
-                    Message::Promise(i, self.id)
-                }
-                else{
+                if i <= self.max_known_id {
                     Message::Fail(i, self.id)
+                }
+                else {
+                    self.max_known_id = i;
+                    if self.status == Status::Accepted{
+                        Message::AcceptedPromise(i, self.accepted_id, self.val, self.id)
+                    }
+                    else {
+                        self.status = Status::Promised;
+                        Message::Promise(i, self.id)
+                    }
                 }
             },
             Message::Propose(i,v, _) => {
                 if self.max_known_id == i {
                     self.val = v;
                     self.status = Status::Accepted;
+                    self.accepted_id = i;
                     Message::Accepted(i, v, self.id)
                 }
                 else{
@@ -178,6 +185,7 @@ impl Default for Acceptor{
             max_known_id: 0,
             id: 0,
             val: 0,
+            accepted_id: 0,
             status: Status::Active,
             to_send: HashMap::new(),
         }

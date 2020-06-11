@@ -12,6 +12,8 @@ pub struct Proposer{
     to_send: HashMap<u32, Message>,
     promised: HashSet<u32>,
     accepted: HashSet<u32>,
+    aval: u32,
+    aid: u32,
     pub status: Status,
     prom_state: bool
 
@@ -89,6 +91,30 @@ impl Proposer{
         self.status = status;
     }
 
+    /// Function to perform actions needed to respond to Promise messages.
+    ///
+    /// # Arguments
+    /// 
+    /// * `id` - Id from the message.
+    /// * `sid` - Sender Id, usually the Id from the acceptor which sent a Promise message
+    /// * `acc_size` - Number of Acceptors which need to sent Promise messages before Proposer will reply 
+    ///
+    fn promised_sub(&mut self, id: u32, sid: u32, acc_size: usize){
+        if self.prom_state {
+            self.to_send.insert(sid,Message::Propose(id, self.val, id));
+        }
+        else if self.promised.len() > acc_size {
+            if self.aval > 0 {
+                self.val = self.aval;
+            }
+            self.status = Status::Promised;
+            self.prom_state = true;
+            for aid in self.promised.iter(){
+                self.to_send.insert(*aid,Message::Propose(id, self.val, id));
+            }
+        }
+    }
+    
     /// Function to perform proposer actions.
     ///
     /// # Arguments
@@ -133,19 +159,17 @@ impl Proposer{
             while bucket.len() > 0 {
                 let message = bucket.pop().unwrap();
                 match message {
+                    // Add an option for ACC_PROM
                     Message::Promise(id,sid) => {
                         self.promised.insert(sid);
-                        if self.prom_state {
-                            self.to_send.insert(sid,Message::Propose(id, self.val, id));
+                        self.promised_sub(id, sid, acc_size);
+                    },
+                    Message::AcceptedPromise(id, aid, aval, sid) => {
+                        if aid > self.aid{
+                            self.aval = aval;
                         }
-                        else if self.promised.len() > acc_size {
-                            self.status = Status::Promised;
-                            self.prom_state = true;
-                            for aid in self.promised.iter(){
-                                self.to_send.insert(*aid,Message::Propose(id, self.val, id));
-                            }
-                        }
-                        
+                        self.promised.insert(sid);
+                        self.promised_sub(id, sid, acc_size);
                     },
                     Message::Accepted(_,_,sid) => {
                         self.accepted.insert(sid);
@@ -199,6 +223,8 @@ impl Default for Proposer{
             to_send: HashMap::new(),
             promised: HashSet::new(),
             accepted: HashSet::new(),
+            aval: 0,
+            aid: 0,
             status: Status::Active,
             prom_state: false
         }
