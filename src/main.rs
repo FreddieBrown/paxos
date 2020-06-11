@@ -139,3 +139,6 @@ fn main() {
     println!("Ending Program. Value is {}", declared_val);
     // End program
 }
+
+#[cfg(test)]
+mod tests;
