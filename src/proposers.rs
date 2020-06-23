@@ -124,9 +124,10 @@ impl Proposer{
     /// * `list` - List of running Acceptors
     /// * `buffer` - Shared buffer where messages are shared between nodes in the network
     ///
-    pub fn run(&mut self, list: &Vec<Acceptor>, buffer: &mut HashMap<u32, Vec<Message>>){
+    pub fn run(&mut self, list: &Arc<Vec<Mutex<Acceptor>>>, buffer: &Arc<HashMap<u32, Mutex<Vec<Message>>>>){
         if self.status == Status::Active && self.val > 0{
-            for acc in list.iter(){
+            for acc_mut in (*list).iter(){
+                let acc = acc_mut.lock().unwrap();
                 match acc.status {
                     Status::Active => {
                         self.status = Status::Prepared;
@@ -154,10 +155,10 @@ impl Proposer{
     /// 
     /// * `buffer` - Shared buffer where messages are shared between nodes in the network
     ///
-    pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
-        if buffer.contains_key(&self.id) && self.status != Status::Failed {
+    pub fn check_buffer(&mut self, buffer: &Arc<HashMap<u32, Mutex<Vec<Message>>>>) {
+        if (*buffer).contains_key(&self.id) && self.status != Status::Failed {
             let acc_size: usize = ((self.num_acceptors/2)+1) as usize;
-            let bucket = buffer.get_mut(&self.id).unwrap();
+            let mut bucket = (*buffer).get(&self.id).unwrap().lock().unwrap();
             while bucket.len() > 0 {
                 let message = bucket.pop().unwrap();
                 match message {
@@ -195,12 +196,12 @@ impl Proposer{
     /// 
     /// * `buffer` - Shared buffer where messages are shared between nodes in the network
     ///
-    pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
+    pub fn send_buffer(&mut self, buffer: &Arc<HashMap<u32, Mutex<Vec<Message>>>>){
         if self.status != Status::Failed {
             for (k,v) in self.to_send.drain(){
-                if buffer.contains_key(&k){
+                if (*buffer).contains_key(&k){
                     println!("Sending ({}) to Acc {} from Prop {}", &v, &k, &self.id);
-                    let bucket = buffer.get_mut(&k).unwrap();
+                    let mut bucket = (*buffer).get(&k).unwrap().lock().unwrap();
                     bucket.push(v);
                 }
             }

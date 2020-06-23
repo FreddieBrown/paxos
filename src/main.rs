@@ -63,7 +63,7 @@ fn main() {
 
     let accs: Arc<u32> = Arc::new((3*f)+1);
     let props: Arc<u32> = Arc::new((3*f)+1);
-    let mut declared_val = Arc::new(Mutex::new(0));
+    let declared_val = Arc::new(Mutex::new(0));
     let mut rng = rand::thread_rng();
     let threshold: Arc<u32> = Arc::new(((*range as f32)*prob) as u32);
     let fail_val = Arc::new(rng.gen_range(1, *range+1));
@@ -71,9 +71,9 @@ fn main() {
 
     // Setting up data structures to hold information
     let mut handles = vec![];
-    let mut buffer: Arc<HashMap<u32, Mutex<Vec<Message>>>>;
-    let mut acceptors: Arc<Vec<Mutex<Acceptor>>>;
-    let mut proposers: Arc<Vec<Mutex<Proposer>>>;
+    let buffer: Arc<HashMap<u32, Mutex<Vec<Message>>>>;
+    let acceptors: Arc<Vec<Mutex<Acceptor>>>;
+    let proposers: Arc<Vec<Mutex<Proposer>>>;
 
     // Create acceptors and proposers
         // Make these accessible using Arc
@@ -100,6 +100,7 @@ fn main() {
         prop_temp.push(Mutex::new(ppr));
         buff_temp.insert(j, Mutex::new(Vec::new()));
     }
+    println!("Number of Acceptors needed for majority: {}", (((*accs)/2)+1));
 
     acceptors = Arc::from(acc_temp);
     proposers = Arc::from(prop_temp);
@@ -119,42 +120,53 @@ fn main() {
         let handle = thread::spawn(move || {
             let th_id = t;
             let mut rng_th = rand::thread_rng();
-            let number = rng_th.gen_range(1, *range_num+1);
-            let id = rng_th.gen_range(*acc_num, *acc_num+*prop_num);
-            let fail_id = rng_th.gen_range(0, *acc_num+*prop_num);
-            println!("Thread {}: {}, {}, {}", t, number, id, fail_id);
             let prop_id = *acc_num + th_id;
 
             loop {
-                // Acceptors
-                let mut acceptor = (*accs_th)[th_id as usize].lock().unwrap();
-                if number == *fail_val_th && fail_id == th_id {
-                    acceptor.set_status(Status::Failed);
-                    println!("Acceptor {} has failed", th_id);
-                }
+                let number = rng_th.gen_range(1, *range_num+1);
+                let id = rng_th.gen_range(*acc_num, *acc_num+*prop_num);
+                let fail_id = rng_th.gen_range(0, *acc_num+*prop_num);
+                let mut proposer = (*props_th)[th_id as usize].lock().unwrap();
+                // println!("Thread {}: {}, {}, {}", t, number, id, fail_id);
 
-                acceptor.check_buffer(&buffer_th);
-                acceptor.send_buffer(&buffer_th);
+                // Acceptors
+                {
+                    let mut acceptor = (*accs_th)[th_id as usize].lock().unwrap();
+                    if number == *fail_val_th && fail_id == th_id {
+                        acceptor.set_status(Status::Failed);
+                        println!("Acceptor {} has failed", th_id);
+                    }
+                    // println!("Thread {}", th_id);
+                    acceptor.check_buffer(&buffer_th);
+                    acceptor.send_buffer(&buffer_th);
+                    if proposer.status == Status::Failed && acceptor.status == Status::Failed{
+                        return
+                    }
+                }
 
                 // Proposers
-                let mut proposer = (*props_th)[th_id as usize].lock().unwrap();
-                if number == *fail_val_th && fail_id == prop_id { 
-                    proposer.set_status(Status::Failed);
-                    println!("Proposer {} has failed", prop_id);
-                }
-
-                if proposer.status != Status::Failed && number <= *threshold_th && prop_id == id {
-                    proposer.set_val(number);
-                }
-
-                // proposer.run(/*Include Proposer Crap here*/);
                 
-                let mut decl = *(declared_val_th).lock().unwrap();  
+                if proposer.status != Status::Failed {
+                    if number == *fail_val_th && fail_id == prop_id { 
+                        proposer.set_status(Status::Failed);
+                        println!("Proposer {} has failed", prop_id);
+
+                    }
+
+                    
+
+                    if number <= *threshold_th && prop_id == id {
+                        proposer.set_val(number);
+                    }
+
+                    proposer.run(&accs_th, &buffer_th);
+                }
+                 
                 if proposer.status == Status::Accepted {
-                    decl = proposer.val();
+                    *(declared_val_th).lock().unwrap() = proposer.val();
                 }
                 
-                if decl > 0 {
+                if *(declared_val_th).lock().unwrap() > 0 {
                     return
                 }
             }
@@ -168,8 +180,31 @@ fn main() {
     for handle in handles {
         handle.join().unwrap();
     }
+    num_of_fails(&acceptors, &proposers);
+    println!("DECLARED VALUE: {}", *(declared_val).lock().unwrap());
+}
 
-    println!("Ending Program. Value is {}", *(declared_val).lock().unwrap());
+fn num_of_fails(acceptors: &Arc<Vec<Mutex<Acceptor>>>, proposers: &Arc<Vec<Mutex<Proposer>>>) {
+    let mut acc_fails = 0;
+    let mut prop_fails = 0;
+    for acc_mut in (*acceptors).iter(){
+        let acc = acc_mut.lock().unwrap();
+        match acc.status {
+            Status::Failed => acc_fails += 1,
+            _ => ()
+        };
+    }
+
+    for prop_mut in (*proposers).iter(){
+        let prop = prop_mut.lock().unwrap();
+        match prop.status {
+            Status::Failed => prop_fails += 1,
+            _ => ()
+        };
+    }
+
+    println!("Number of Acceptors Failed {}/{}", acc_fails, (*acceptors).len());
+    println!("Number of Proposers Failed {}/{}", prop_fails, (*proposers).len());
 }
 
 #[cfg(test)]
