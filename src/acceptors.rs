@@ -2,7 +2,9 @@ use std::fmt;
 use crate::messages::Message;
 use crate::messages::Status;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
+#[derive(Debug)]
 pub struct Acceptor{
     max_known_id: u32,
     id: u32,
@@ -136,16 +138,20 @@ impl Acceptor{
     /// 
     /// * `buffer` - Shared buffer where messages are shared between nodes in the network
     ///
-    pub fn check_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>) {
-        if buffer.contains_key(&self.id) && self.status != Status::Failed {
-            let bucket = buffer.get_mut(&self.id).unwrap();
+    pub fn check_buffer(&mut self, buffer: &Arc<HashMap<u32, Mutex<Vec<Message>>>>) {
+        // println!("Checking Buffer");
+        if (*buffer).contains_key(&self.id) && self.status != Status::Failed {
+            let mut bucket = (*buffer).get(&self.id).unwrap().lock().unwrap();
             while bucket.len() > 0 {
                 let message = self.check_message(bucket.pop().unwrap());
                 match message {
                     Message::Promise(id, _) => self.to_send.insert(id, message),
                     Message::Fail(id, _) => self.to_send.insert(id, message),
                     Message::Accepted(id, _, _) => self.to_send.insert(id, message),
-                    _ => panic!("Wrong message created"),
+                    Message::AcceptedPromise(id, _, _, _) => self.to_send.insert(id, message),
+                    _ => {
+                        panic!("Wrong message created, ID: {}, Message: {}", &self.id, message);
+                    },
                 };
             }
         }
@@ -158,12 +164,13 @@ impl Acceptor{
     /// 
     /// * `buffer` - Shared buffer where messages are shared between nodes in the network
     ///
-    pub fn send_buffer(&mut self, buffer: &mut HashMap<u32, Vec<Message>>){
+    pub fn send_buffer(&mut self, buffer: &Arc<HashMap<u32, Mutex<Vec<Message>>>>){
+        // println!("Sending to Buffer");
         if self.status != Status::Failed {
             for (k,v) in self.to_send.drain(){
-                if buffer.contains_key(&k){
+                if (*buffer).contains_key(&k){
                     println!("Sending ({}) to Prop {} from Acc {}", &v, &k, &self.id);
-                    let bucket = buffer.get_mut(&k).unwrap();
+                    let mut bucket = (*buffer).get(&k).unwrap().lock().unwrap();
                     bucket.push(v);
                 }
             }
