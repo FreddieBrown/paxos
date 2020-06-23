@@ -4,7 +4,9 @@ use crate::messages::Status;
 use crate::acceptors::Acceptor;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 
+#[derive(Debug)]
 pub struct Proposer{
     id: u32,
     val: u32,

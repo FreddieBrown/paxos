@@ -28,6 +28,7 @@ impl fmt::Display for Message{
 
 }
 
+#[derive(Debug)]
 #[derive(PartialEq, Eq)]
 pub enum Status{
     Active,
