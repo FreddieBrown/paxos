@@ -1,8 +1,8 @@
 # PAXOS
 
-This repo is a synchronous Rust implementation of the PAXOS consensus protocol.
+This repo is a asynchronous Rust implementation of the PAXOS consensus protocol.
 
-This is a single thread simulation desgined to show how PAXOS works for a certain f-tolerance.
+This is a multi-threaded simulation desgined to show how PAXOS works for a certain f-tolerance.
 
 To run the program, use `cargo run`. This will run the program with its basic options.
 
