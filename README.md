@@ -1,6 +1,6 @@
 # PAXOS
 
-This repo is a asynchronous Rust implementation of the PAXOS consensus protocol.
+This repo is an asynchronous Rust implementation of the PAXOS consensus protocol.
 
 This is a multi-threaded simulation desgined to show how PAXOS works for a certain f-tolerance.
 
